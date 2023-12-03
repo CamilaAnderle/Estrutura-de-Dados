@@ -1,0 +1,174 @@
+#include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct deque_t {
+  size_t front;
+  size_t back;
+  size_t size;
+  size_t capacity;
+  int *deque;
+} deque_t;
+
+static void deque_expand(deque_t *d);
+static void deque_shrink(deque_t *d);
+
+static void deque_expand(deque_t *d) {
+  size_t old_capacity = d->capacity;
+  d->capacity *= 2;
+  d->deque = realloc(d->deque, sizeof(int) * d->capacity);
+  if (d->front > d->back) {
+    for (size_t i = d->front; i < old_capacity; i++) {
+      d->deque[i + old_capacity] = d->deque[i];
+    }
+    d->front = d->front + old_capacity;
+  }
+}
+
+static void deque_shrink(deque_t *d) {
+  size_t new_capacity = d->capacity / 2;
+  if (d->front <= d->back) {
+    for (size_t i = d->front, j = 0; i <= d->back; i++, j++) {
+      d->deque[j] = d->deque[i];
+    }
+  } else {
+    size_t front_len = d->capacity - d->front;
+    for (int i = d->back; i >= 0; i--) {
+      d->deque[i + front_len] = d->deque[i];
+    }
+    for (size_t i = d->front, j = 0; i < d->capacity; i++, j++) {
+      d->deque[j] = d->deque[i];
+    }
+  }
+  d->front = 0;
+  d->back = d->size - 1;
+  d->capacity = new_capacity;
+  d->deque = realloc(d->deque, d->capacity * sizeof(int));
+}
+
+void deque_initialize(deque_t **d) {
+  (*d) = malloc(sizeof(deque_t));
+  (*d)->front = 0;
+  (*d)->back = 3;
+  (*d)->size = 0;
+  (*d)->capacity = 4;
+  (*d)->deque = malloc(sizeof(int) * 4);
+}
+
+void deque_delete(deque_t **d) {
+  free((*d)->deque);
+  free(*d);
+  *d = NULL;
+}
+
+void deque_push_back(deque_t *d, int data) {
+  if (d->size == d->capacity) {
+    deque_expand(d);
+  }
+  d->back++;
+  if (d->back == d->capacity)
+    d->back = 0;
+  d->deque[d->back] = data;
+  d->size++;
+}
+
+void deque_push_front(deque_t *d, int data) {
+  if (d->size == d->capacity) {
+    deque_expand(d);
+  }
+  d->front = d->front == 0 ? d->capacity - 1 : d->front - 1;
+  d->deque[d->front] = data;
+  d->size++;
+}
+
+void deque_pop_front(deque_t *d) {
+  assert(d->size > 0);
+  if (d->size == d->capacity / 4 && d->capacity > 4) {
+    deque_shrink(d);
+  }
+  d->front++;
+  d->size--;
+  if (d->front == d->capacity)
+    d->front = 0;
+}
+
+void deque_pop_back(deque_t *d) {
+  if (d->size == d->capacity / 4 && d->capacity > 4) {
+    deque_shrink(d);
+  }
+  assert(d->size > 0);
+  d->back = d->back == 0 ? d->capacity - 1 : d->back - 1;
+  d->size--;
+}
+
+int deque_front(deque_t *d) {
+  assert(d->front < d->capacity);
+  return d->deque[d->front];
+}
+
+int deque_back(deque_t *d) {
+  assert(d->front < d->capacity);
+  return d->deque[d->back];
+}
+
+size_t deque_size(deque_t *d) { return d->size; }
+
+bool deque_empty(deque_t *d) { return deque_size(d) == 0; }
+
+void balancear(deque_t *d, deque_t *d2) {
+  while (deque_size(d) > deque_size(d2)) {
+    deque_push_front(d2, deque_back(d));
+    deque_pop_back(d);
+  }
+  while (deque_size(d) < deque_size(d2)) {
+    deque_push_back(d, deque_front(d2));
+    deque_pop_front(d2);
+  }
+}
+
+int main(void) {
+  int n;
+  scanf("%d", &n);
+
+  deque_t *d;
+  deque_initialize(&d);
+
+  deque_t *d2;
+  deque_initialize(&d2);
+
+  for (int i = 0; i < n; i++) {
+    char s[12];
+    int x;
+    scanf("%s %d", s, &x);
+
+    if (strcmp(s, "push_back") == 0) {
+      deque_push_back(d2, x);
+      balancear(d, d2);
+    } else if (strcmp(s, "push_front") == 0) {
+      deque_push_front(d, x);
+      balancear(d, d2);
+    } else if (strcmp(s, "push_middle") == 0) {
+      if (deque_size(d) > deque_size(d2)) {
+        deque_push_front(d2, x);
+        balancear(d, d2);
+      } else {
+        deque_push_back(d, x);
+        balancear(d, d2);
+      }
+
+    } else if (strcmp(s, "get") == 0) {
+			int posicao = x;
+			int elemento;
+			if (posicao < deque_size(d)) {
+					printf("%d\n", d->deque[(d->front + posicao) % d->capacity]);
+			} else {
+					posicao -= deque_size(d);
+					printf("%d\n", d2->deque[(d2->front + posicao) % d2->capacity]);
+			}
+    }
+  }
+
+  return 0;
+}
